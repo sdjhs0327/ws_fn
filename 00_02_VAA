@@ -1,0 +1,110 @@
+# import
+import pandas as pd
+import numpy as np
+import datetime as dt
+import warnings
+warnings.filterwarnings('ignore')
+import yfinance as yf
+import plotly_express as px
+import plotly.figure_factory as ff
+import cufflinks as cf
+cf.go_offline(connected=True)
+cf.set_config_file(theme='polar')
+import plotly.graph_objects as go
+
+%run ../library/QUANT_FUNCTIONS.ipynb
+Q = QUANT()
+
+# common functions
+## price to index; 개별자산의 가격 데이터를 인덱스로 표준화함
+def index_values(orgin_df):
+    df = orgin_df.copy()
+    for i in df.columns:
+        if (df[i].dtype == float)|(df[i].dtype == int):
+            df[i] = df[i]/df[i][0]
+        else:
+            df[i] = df[i]
+    return df
+## load data
+def get_df(ticker):
+    profit = yf.Ticker(ticker)
+    df = profit.history(period="max")
+    return df
+## only need 'Close' price
+def get_merged_df(*tickers):
+    dfs = [get_df(tickers[i]) for i in range(len(tickers))]
+    temp_df = [dfs[i]['Close'] for i in range(len(dfs))]
+    temp_df = pd.DataFrame(temp_df, index=tickers).T
+    return temp_df
+    
+# strategies
+## cal weighted average of returns m1, m3, m6
+def get_wapr(close):
+    ## only for monthly data
+    ## connect to get_signal();f
+    df_cls = close
+    pr1 = np.log(df_cls/df_cls.shift(1))
+    pr3 = np.log(df_cls/df_cls.shift(3))
+    pr6 = np.log(df_cls/df_cls.shift(6))
+    pr12 = np.log(df_cls/df_cls.shift(12))
+    df_pr = pd.concat([pr1, pr3*(4/12), pr6*(2/12), pr12*(1/12)], axis = 1)
+    mpr = df_pr.mean(axis=1)
+    
+    return mpr
+
+## catch signals
+def get_signal(df):
+    ## risk free return; 2%
+    nrr = (1.02**(1/12))-1
+    ## connect to get_strategy_value;f
+    signal_df = df.copy()
+    for cols in signal_df.columns:
+        signal_df[cols] = get_wapr(signal_df[cols])
+    signal_df = signal_df.dropna()
+
+    atks= signal_df[signal_df.columns[:-3]].T
+    dfcs= signal_df[signal_df.columns[-3:]].T
+    
+    ## logics
+    signal_df['diretion'] = 'bear'
+    signal_df['diretion'][(signal_df[signal_df.columns[0]] > nrr)&(signal_df[signal_df.columns[1]] > nrr)&
+                       (signal_df[signal_df.columns[2]] > nrr)&(signal_df[signal_df.columns[3]] > nrr)] = 'bull'
+
+    optimal_ticker = []
+    for i in range(len(signal_df)):
+        if signal_df['diretion'][i] == 'bull':
+            optimal_ticker.append(atks[atks[atks.columns[i]] == atks[atks.columns[i]].max()].index.values[0])
+        elif signal_df['diretion'][i] == 'bear':
+            optimal_ticker.append(dfcs[dfcs[dfcs.columns[i]] == dfcs[dfcs.columns[i]].max()].index.values[0])
+
+    signal_df['signal'] = optimal_ticker
+    
+    new_df = df.copy()
+    new_df['signal'] = signal_df['signal']
+    new_df['prev'] = new_df['signal'].shift(1)
+    
+    new_df['change'] = 0
+    new_df['change'][new_df['signal'] != new_df['prev']] = 1
+    new_df = new_df.dropna()
+    
+    return new_df, signal_df
+
+def get_strategy_value(df):
+    new_df, signal_df = get_signal(df)
+    ## signal -> chage position
+    new_df['exchange_rate'] = 1.0
+    for i in range(len(new_df)):
+        if (new_df['change'][i] == 1)&(type(new_df['prev'][i]) == str):
+            new_df['exchange_rate'][i] = new_df[new_df['prev'][i]][i]/new_df[new_df['signal'][i]][i]
+    ## cal cummurative exchage rate
+    new_df['cum_exchange_rate'] = new_df['exchange_rate']
+    for i in range(len(new_df)):
+        new_df['cum_exchange_rate'][i] = new_df['exchange_rate'][:i+1].product()
+    ## cal values
+    new_df['strategy'] = 1.0
+    for i in range(len(new_df)):
+        new_df['strategy'][i] = new_df[new_df['signal'][i]][i]*new_df['cum_exchange_rate'][i]
+        
+    result = new_df.drop(columns=['change', 'exchange_rate', 'cum_exchange_rate'])
+        
+    return result
