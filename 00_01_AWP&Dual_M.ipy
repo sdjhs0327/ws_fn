@@ -16,7 +16,7 @@ cf.set_config_file(theme='polar')
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 ## my library(quant functions)
-%run ../library/QUANT_FUNCTIONS.ipynb
+%run QUANT_FUNCTIONS.ipynb
 Q = QUANT()
 
 # strategies
