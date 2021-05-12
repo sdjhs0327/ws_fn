@@ -1,0 +1,223 @@
+# import
+## handling
+import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
+import numpy as np
+import datetime as dt
+## price data
+import yfinance as yf
+## viz
+import plotly_express as px
+import plotly.figure_factory as ff
+import cufflinks as cf
+cf.go_offline(connected=True)
+cf.set_config_file(theme='polar')
+import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+## my library(quant functions)
+%run ../library/QUANT_FUNCTIONS.ipynb
+Q = QUANT()
+
+# strategies
+## Dual Momentum
+### load data
+def get_dual_df(first_ticker, second_ticker, safe_ticker):
+    '''first_ticker; main assets, second_ticker; sub assets, safe_ticker; safe assets'''
+    first = yf.Ticker(first_ticker)
+    second= yf.Ticker(second_ticker)
+    safe = yf.Ticker(safe_ticker)
+
+    first_df = first.history(period="max")
+    second_df = second.history(period="max")
+    safe_df = safe.history(period="max")
+    
+    df = pd.concat([first_df['Close'], second_df['Close'], safe_df['Close']], axis = 1)
+    df.columns = [first_ticker, second_ticker, safe_ticker]
+    df = df.dropna()
+    
+    return df
+    
+## execution
+### average of (1m return, 3m return, 6m return)
+def get_mpr(close):
+    '''connect to get_signal;f'''
+    df_cls = close
+    pr1 = np.log(df_cls/df_cls.shift(20))
+    pr3 = np.log(df_cls/df_cls.shift(60))
+    pr6 = np.log(df_cls/df_cls.shift(120))
+    df_pr = pd.concat([pr1, pr3, pr6], axis = 1)
+    mpr = df_pr.mean(axis=1)
+    return mpr
+    
+### catch momentom signals
+def get_signal(df):
+    '''connect to get_strategy_value()'''
+    # nrr is risk free return; yearly 2%
+    nrr = 1.02**(1/12)
+    thr = np.mean([nrr-1, (nrr**3)-1, (nrr**6)-1])
+    
+    first_ticker = df.columns[0]
+    second_ticker = df.columns[1]
+    safe_ticker = df.columns[2]
+    
+    first_df = get_mpr(df[first_ticker])
+    second_df = get_mpr(df[second_ticker])
+    safe_df = get_mpr(df[safe_ticker])
+    
+    signal_df = pd.concat([first_df, second_df, safe_df], axis=1)
+    signal_df.columns = [first_ticker, second_ticker, safe_ticker]
+    signal_df = signal_df.dropna()
+    # catch logics
+    signal_df['signal'] = safe_ticker
+    signal_df['signal'][(signal_df[first_ticker] > thr)|(signal_df[second_ticker] > thr)] = second_ticker
+    signal_df['signal'][(signal_df['signal'] ==second_ticker)&(signal_df[first_ticker] >= signal_df[second_ticker])] = first_ticker
+    
+    new_df = df.copy()
+    new_df['signal'] = signal_df['signal']
+    new_df['prev'] = new_df['signal'].shift(1)
+    
+    new_df['change'] = 0
+    new_df['change'][new_df['signal'] != new_df['prev']] = 1
+    new_df = new_df.dropna()
+    return new_df
+
+### execute strategy
+def get_strategy_value(df):
+    new_df = get_signal(df)
+    ## if catch signal then change position
+    new_df['exchange_rate'] = 1.0
+    for i in range(len(new_df)):
+        if (new_df['change'][i] == 1)&(type(new_df['prev'][i]) == str):
+            new_df['exchange_rate'][i] = new_df[new_df['prev'][i]][i]/new_df[new_df['signal'][i]][i]         
+    ## cal cumurative values
+    new_df['cum_exchange_rate'] = new_df['exchange_rate']
+    for i in range(len(new_df)):
+        new_df['cum_exchange_rate'][i] = new_df['exchange_rate'][:i+1].product()
+    ## cal strategy value
+    new_df['strategy'] = 1.0
+    for i in range(len(new_df)):
+        new_df['strategy'][i] = new_df[new_df['signal'][i]][i]*new_df['cum_exchange_rate'][i]
+
+    first_ticker = df.columns[0]
+    second_ticker = df.columns[1]
+    safe_ticker = df.columns[2]
+    
+    result = new_df[[first_ticker, second_ticker, safe_ticker, 'strategy', 'signal']]
+    return result
+ 
+ 
+ 
+## AWP
+### load data
+def get_AWP_df(first_ticker, second_ticker, fixed_ticker, gold_ticker, etc_ticker):
+    '''first_ticker: main assets, second_ticker: sub assets, fixed_ticker: fixed income assets
+    gold_ticker: gold, etc_ticker: commodities or sumeting special
+    '''
+    first = yf.Ticker(first_ticker)
+    second= yf.Ticker(second_ticker)
+    fixed = yf.Ticker(fixed_ticker)
+    gold = yf.Ticker(gold_ticker)
+    etc = yf.Ticker(etc_ticker)
+
+    first_df = first.history(period="max")
+    second_df = second.history(period="max")
+    fixed_df = fixed.history(period="max")
+    gold_df = gold.history(period="max")
+    etc_df = etc.history(period="max")
+    
+    df = pd.concat([first_df['Close'], second_df['Close'], fixed_df['Close'], gold_df['Close'], etc_df['Close']], axis = 1)
+    df.columns = [first_ticker, second_ticker, fixed_ticker, gold_ticker, etc_ticker]
+    df = df.dropna()
+    
+    return df
+    
+### AWP logic
+def cal_AWP(df, ratio = [0.5, 0.5], rebalancing=None, unit = None):
+    new_df = df.copy()
+    ''' rebalancing 'm'; monthly , 'y' yearly '''
+    df_dict = []
+    years = sorted(new_df.index.year.unique())
+    months = sorted(new_df.index.month.unique())
+    
+    ## rebalancing value error correction
+    if (rebalancing == 'm')&(unit == 'monthly'):
+        temp_df = new_df.copy()
+        temp_df.index = temp_df.index - dt.timedelta(days=1)
+        new_df = new_df.append(temp_df)
+        new_df = new_df.sort_index()
+        new_df = new_df.shift(-1).dropna()
+        
+    if rebalancing == 'm' :
+        for year in years:
+            for month in months:
+                temp = new_df[(new_df.index.year == year)&(new_df.index.month == month)]
+                if len(temp) > 0:
+                    df_dict.append(temp)
+                    
+    elif rebalancing == 'y':
+        for year in years:
+            temp = new_df[(new_df.index.year == year)]
+            if len(temp) > 0:
+                df_dict.append(temp)
+    else:
+        df_dict.append(new_df)
+    ## rebalancing
+    prev_val = 1
+    temp_series = pd.Series()
+    for i in range(len(df_dict)):    
+        temp = index_values(df_dict[i])
+        temp_AWP = (temp * ratio).sum(axis=1)*prev_val
+        prev_val = temp_AWP[-1]
+        temp_series = temp_series.append(temp_AWP)
+    new_df['strategy'] = temp_series
+    
+    ## get result
+    if (rebalancing == 'm')&(unit == 'monthly'):
+        new_df['temp_y'] = new_df.index.year
+        new_df['temp_m'] = new_df.index.month
+        new_df = new_df.drop_duplicates(['temp_y', 'temp_m'])
+        new_df = new_df.drop(columns=['temp_y', 'temp_m'])
+        new_df.index = df.index
+    
+    return new_df
+    
+ ### optimalize
+ def cal_optimal(df, df_unit='monthly', rebalancing = 'm'):
+    ''' df_unit: data gathering terms ; daily, monthly => for calculate return and YRR(yearly risk)
+    ## rebalancing rebalancing terms : None, m, y '''
+    pyrr = []     # list for return
+    pydd = []     # list for risk
+    pstn = []
+    weghs = []
+
+    for p in range (1000):
+        if p%10 == 0:
+            print(f"{p}단계 진행중")
+        weights = np.random.random(len(df.T))   # random n(cnt of assets) numbers
+        weights /= np.sum(weights)     # number to ratio; sum of ratio is 1
+
+        result_df = cal_AWP(df, weights, rebalancing=rebalancing, unit=df_unit)
+        sortino = Q.get_SRTR_report(result_df, 'a', unit=df_unit)
+
+        pyrr.append(sortino['YRR'][len(sortino)-1])
+        pydd.append(sortino['YDD'][len(sortino)-1])
+        pstn.append(sortino['Sortino Ratio'][len(sortino)-1])
+        weghs.append(weights)
+
+    pyrr = np.array(pyrr)
+    pydd = np.array(pydd)
+    pstn = np.array(pstn)
+    weghs = np.array(weghs)
+
+    process = pd.DataFrame(weghs, columns=df.columns)
+    process['YRR'] = pyrr
+    process['YDD'] = pydd
+    process['Sortino Ratio'] = pstn
+    
+    obtimal = process[process['Sortino Ratio']==process['Sortino Ratio'].max()]
+    obtimal = obtimal.reset_index(drop=True)
+    min_risk = process[process['YDD']==process['YDD'].min()]
+    min_risk = min_risk.reset_index(drop=True)
+
+    return process, obtimal, min_risk
