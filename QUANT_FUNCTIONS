@@ -1,0 +1,328 @@
+import numpy as np
+import pandas as pd
+import yfinance as yf
+
+from sympy import Symbol, solve, solveset, Interval
+from sklearn.linear_model import LinearRegression
+
+class QUANT:    
+    def __init__(self):
+        self.info = 'Frequently utilized financial engineering functions'
+    
+    ## Calculating geometric returns on investments in held instruments accumulated up to the end of the period
+    ## 보유상품을 기간말까지 적립식으로 투자했을 때의 기하수익률 산출
+    def get_ACI_CAGR(self, ls):
+        '''
+        geometric returns in held instruments accumulated
+        적립식 투자 기하수익률(%) 산출 함수
+        '''
+        er_ls = 1+ ((ls[len(ls)-1] - ls)/ls)
+        er_ls = er_ls[:-1]
+        CAGR = (er_ls.product()**(1/len(er_ls)))
+        CAGR = (CAGR - 1)*100
+        return CAGR
+    
+    ## Geometric return per period
+    def get_ACI_RPP(self, ls):
+        '''
+        Geometric return per period in held instruments accumulated
+        적립식 투자 기하수익률(%)을 기간으로 분할하는 함수
+        '''
+        CAGR = self.get_ACI_CAGR(ls)
+        CAGR = (1+CAGR*(1/100))
+        length = len(ls)-1
+        RPP = (CAGR**(length*(2/(length*(length+1)))))
+        RPP = (RPP - 1)*100
+        return RPP
+    
+    ## A function that calculates the final return on regular payment based on the retention period (month) and annual return
+    def YR_to_TR(self, duration, YR, last_month = False):
+        '''
+        A function that calculates the final rate of return on regular payments at the retention period and annual rate of return
+        보유기간, 연수익률로 정기납입 최종수익률을 산출하는 함수
+        '''
+        MR = YR**(1/12)
+        if last_month == False:
+            n = duration - 1
+            c = MR*((MR**n - 1)/(MR-1))
+        elif last_month == True:
+            n = duration
+            c = ((MR**n - 1)/(MR-1))       
+        TR = c/n
+        return TR
+    
+    ## A function that calculates the unit period yield on the basis of the retention period and the final rate of return
+    def TR_to_PR(self, duration, TR, last_month = False):
+        '''
+        A function that monthlyizes the final rate of return based on retention
+        보유기간을 기준으로 최종수익률을 월율화하는 함수
+        '''
+        r=Symbol('r')
+        c = TR
+        if last_month == False:
+            n = duration - 1
+            equation = r*((r**(n) - 1)/(r-1)) - n*c
+        elif last_month == True:
+            n = duration
+            equation = ((r**(n) - 1)/(r-1)) - n*c
+        val = solveset(equation, r, Interval(0, 999))
+        PR = float(list(val)[0])
+        return PR
+    
+    ## calculate YTD, connect to get_YTDs;f
+    def cal_YTD(self, df, ticker, year, method ='g'):
+        '''
+        **calculate YTD(yearly return)**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        first = df[ticker][(df.index.year == year)][0]
+        last = df[ticker][(df.index.year == year)][-1]
+        if method == 'g':
+            YTD = np.log(last/first)
+        elif method == 'a':
+            YTD = (last-first)/first
+        return YTD
+
+    ## viz YTD -> connect in cal_YTD
+    def get_YTDs(self, df, ticker, method ='g'):
+        '''
+        **viz YTD(yearly return)**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        temp_idx= df.index.year.unique()
+        temp_ls = []    
+        for i in range(len(temp_idx)-1):
+            if method == 'g':
+                YTD = self.cal_YTD(df, ticker, temp_idx[i], method ='g')
+            elif method == 'a':
+                YTD = self.cal_YTD(df, ticker, temp_idx[i], method ='a')
+            temp_ls.append(YTD)   
+
+        YTD_df = pd.DataFrame(temp_ls, columns=['YTD'], index=temp_idx[:-1])
+        YTD_df = YTD_df.T
+        YTD_df['MEAN'] = YTD_df.mean(axis=1).values[0]
+        YTD_df = YTD_df.T
+        return YTD_df
+    
+    ## calculate MDD, min of HRR
+    def cal_HRR(self, df, ticker, method ='g'):
+        '''
+        **calculate HRR**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        temp_ls = []
+        for i in range(len(df)):
+            if method == 'g':
+                val = np.log(df[ticker][i]/df[ticker][:i+1].max())
+            elif method == 'a':
+                val = (df[ticker][i] - df[ticker][:i+1].max())/df[ticker][:i+1].max()
+            temp_ls.append(val)
+        HRR = pd.DataFrame(temp_ls, columns=['HRR'], index=df.index)
+        return HRR
+    
+    ## yearly downside risk
+    def cal_YDD(self, df, ticker, method ='g', unit = 'daily'):
+        '''
+        **calculate YDD(yearly downside risk)**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        if method == 'g':
+            target_ls = np.log(df[ticker]/df[ticker].shift(1))
+        elif method == 'a':
+            target_ls = (df[ticker]-df[ticker].shift(1))/df[ticker].shift(1)
+        if unit == 'daily':
+            YDD = (((((target_ls[target_ls<0])**2).sum()/(len(target_ls)-1))*250)**0.5)
+        elif unit == 'monthly':
+            YDD = (((((target_ls[target_ls<0])**2).sum()/(len(target_ls)-1))*12)**0.5)
+        return YDD
+    
+    ## calculate yearly return
+    def cal_YRR(self, df, ticker, method ='g', unit = 'daily'):
+        '''
+        **cal YDD(yearly return)**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        if method == 'g':
+            total_err = np.log(df[ticker][-1]/df[ticker][0])
+        elif method == 'a':
+            total_err = (df[ticker][-1]-df[ticker][0])/df[ticker][0]
+        if unit == 'daily':
+            yrr = (1+total_err)**(250/len(df))-1
+        elif unit == 'monthly':
+            yrr = (1+total_err)**(12/len(df))-1
+        return yrr
+    
+    ## yearly return report -> connect in get_YTDs;f
+    def get_YTD_report(self, df, method='g'):
+        '''
+        **viz YTD report**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        YTD_df = pd.DataFrame(columns=df.columns)
+        for i in df.columns:
+            if (df[i].dtype == float)|(df[i].dtype == int):
+                YTD_df[i] = self.get_YTDs(df, i, method)['YTD']
+            else:
+                YTD_df[i] = np.nan
+            YTD_df = YTD_df.dropna(axis=1)
+        return YTD_df
+
+    ## max draw down report -> connect in cal_HRR;f
+    def get_MDD_report(self, df, method='g'):
+        '''
+        **viz MDD report**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        ## cal HRR
+        HRR_df = pd.DataFrame(columns=df.columns)
+        for i in df.columns:
+            if (df[i].dtype == float)|(df[i].dtype == int):
+                HRR_df[i] = self.cal_HRR(df, i, method)['HRR']
+            else:
+                HRR_df[i] = np.nan
+            HRR_df = HRR_df.dropna(axis=1)
+        ## cal MDD
+        temp_ls = []
+        for i in HRR_df.columns:
+            temp = HRR_df[i][HRR_df[i] == HRR_df[i].min()]
+            temp_ls.append([i, temp.values[0], temp.index[0]])
+            MDD_df = pd.DataFrame(temp_ls, columns=['Ticker', 'MDD', 'Date'])
+        return MDD_df, HRR_df
+
+    ## cal sortino ratio -> connect in cal_YRR;f&cal_YDD;f
+    def get_SRTR_report(self, df, method='g', unit = 'daily'):
+        '''
+        **viz STRT(sortino ratio)**
+        - Arithmetic:a
+        - Geometric:g
+        '''
+        temp_ls = []
+        for i in df.columns:
+            if (df[i].dtype == float)|(df[i].dtype == int):
+                YRR = self.cal_YRR(df, i, method, unit)
+                YDD = self.cal_YDD(df, i, method, unit)
+                SRTR = YRR/YDD ##ignore risk free
+                temp_ls.append([i, YRR, YDD, SRTR])
+                SRTR_df = pd.DataFrame(temp_ls, columns=['Ticker', 'YRR', 'YDD', 'Sortino Ratio'])
+        return SRTR_df
+        
+    ## connect with get_beta_df;f
+    def get_rets_df(self, df):
+        '''get Geometric idr(increase & decrease rate) df'''
+        rets = np.log(df/df.shift(1))
+        rets = rets.dropna()
+        return rets
+        
+    ## connect with get_rets_df;f
+    def cal_beta(self, rets, ticker1, ticker2):
+        '''cal beta'''
+        X = rets[ticker1]
+        y = rets[ticker2]
+
+        line_fitter = LinearRegression()
+        line_fitter.fit(X.values.reshape(-1,1), y)
+        beta = line_fitter.coef_[0]
+
+        return beta
+        
+        ## connect with get_rets_df;f
+    def get_beta_df(self, rets):
+        '''viz veta'''
+        betas = [self.cal_beta(rets, i, j) for i in rets.columns for j in rets.columns]
+        tickers = [(i, j) for i in rets.columns for j in rets.columns]
+        beta_df = pd.DataFrame(np.array(betas).reshape((len(rets.columns), len(rets.columns))), columns=rets.columns, index=rets.columns)
+
+        return beta_df
+    
+        ## connect with get_rets_df;f
+    def get_odds_df(self, rets, rf):
+        '''cal odds'''
+        odds = (rets>rf).sum()/len(rets)
+        odds = pd.DataFrame(odds, columns=['odds'])
+        return odds
+    
+class DATA:    
+    def __init__(self):
+        self.info = 'functions that load and merge data'
+        
+    ## load data ## connect to get_merged_df;f
+    def get_df(self, ticker):
+        '''load data yfinance'''
+        profit = yf.Ticker(ticker)
+        df = profit.history(period="max")
+        return df
+
+    ## merge close price data ## connect in get_df;f
+    def get_merged_df(self, *tickers):
+        '''only need close data'''
+        dfs = [self.get_df(tickers[i]) for i in range(len(tickers))]
+        temp_df = [dfs[i]['Close'] for i in range(len(dfs))]
+        temp_df = pd.DataFrame(temp_df, index=tickers).T
+        return temp_df
+    
+    ## price to index
+    def index_values(self, orgin_df):
+        '''converts time series df to a index(1)'''
+        df = orgin_df.copy()
+        for i in df.columns:
+            if (df[i].dtype == float)|(df[i].dtype == int):
+                df[i] = df[i]/df[i][0]
+            else:
+                df[i] = df[i]
+        return df
+    
+    ## modify terms
+    def modi_ts(self, df, units='d'):
+        '''daily time series data conversion functions in days (d), months (m), quarters (q), semiannual (h), years (y)'''
+        new_df = df.copy()
+        new_df['year'] = new_df.index.year
+        new_df['month'] = new_df.index.month
+        new_df['half'] = ((new_df['month']-1)//6)+1
+        new_df['quarter'] = ((new_df['month']-1)//3)+1
+
+        if units == 'd':
+            new_df = df.copy()
+        if units == 'm':
+            ## monthly(m)
+            new_df = new_df.drop_duplicates(['year', 'month'], keep='last')
+        if units == 'q':
+            ## quarterly(q)
+            new_df = new_df.drop_duplicates(['year', 'quarter'], keep='last')
+        if units == 'h':
+            ## semiannually(h)
+            new_df = new_df.drop_duplicates(['year', 'half'], keep='last')
+        if units == 'y':
+            ## yearly(y)
+            new_df = new_df.drop_duplicates('year', keep='last')
+        ## remove temp term index
+        new_df = new_df.drop(columns=['year', 'month', 'half', 'quarter'])
+    
+        return new_df
+    
+    ## cal EMA(Exponential Moving Average)
+    def cal_ema(self, ts, n):
+        '''
+        ts: Time Series, n = term
+        cla EMA(Exponential Moving Average)
+        '''
+        ## cal k
+        k = 2/(1+n)
+        ## ini value -> (SMA:simple Moving Average)
+        ini_val = ts[:n].mean()
+        ## temp space
+        temp_ls = [np.nan for i in range(n-1)]
+        temp_ls.append(ini_val)
+        ## cal ema and save
+        for i in range(len(ts[n:])):
+            val = ts[n + i]*k + temp_ls[n-1+i]*(1-k)
+            temp_ls.append(val)
+        ema_ts = pd.Series(temp_ls, index=ts.index)
+
+        return ema_ts
