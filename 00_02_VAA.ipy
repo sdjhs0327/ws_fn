@@ -12,7 +12,7 @@ cf.go_offline(connected=True)
 cf.set_config_file(theme='polar')
 import plotly.graph_objects as go
 
-%run ../library/QUANT_FUNCTIONS.ipynb
+%run QUANT_FUNCTIONS.ipynb
 Q = QUANT()
 
 # common functions
