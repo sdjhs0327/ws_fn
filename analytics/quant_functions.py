@@ -347,6 +347,23 @@ class anal_funcs(object):
 
         return Pos_inx, Neg_inx
     
+    
+    def cal_kelly_value(self, win_ratio, loss_rate, return_rate):
+        kelly_value = win_ratio/loss_rate - (1-win_ratio)/return_rate
+        return kelly_value
+    
+    def kelly_simulation(self, win_ratio, loss_rate, return_rate, seed, steps=240):
+        kelly_value = self.cal_kelly_value(win_ratio, loss_rate, return_rate)
+        x_0 = seed
+        n = 0
+        while n < steps:
+            x_1 = x_0*(1-kelly_value) + win_ratio*x_0*kelly_value*(1+return_rate) + (1-win_ratio)*x_0*kelly_value*(1-loss_rate)
+            x_0 = x_1
+            n += 1
+        return x_1
+    
+    
+    
 class data_funcs(object):    
     def __init__(self):
         self.info = '데이터를 불러오고 병합 계량하는 함수를 정리함'
