@@ -273,7 +273,7 @@ class anal_funcs(object):
         return report.round(2)
     
 
-    ## 투자시작 시점을 평률화한 리포트
+    ## 투자시작 시점을 평률화한 리포트 ##TODO: 이거 참고해서 EDA할때 쓰기
     def get_Vol_report_E(self, df, method='g', unit = 'daily'):
         ## (len(df)/10)개 데이터로 분할
         dfs = [df.reset_index().shift(i).set_index('Date')[-(len(df)+1 - int(len(df)/10)):]
