@@ -73,6 +73,25 @@ def get_signals(df, target):
     
     return dataset
 
+
+def calc_agr(df):
+    ## AGR 계산
+    cols = df.columns
+    _yrr = []
+    for col in cols:
+        col_srs = df[col].copy()
+        _years = col_srs.index.year.unique()
+        _ls = []
+        for _year in _years:
+            _srs = col_srs[col_srs.index.year == _year]
+            _val = _srs[-1]/_srs[0]-1
+            _ls.append(_val)
+        _yrr.append(_ls)
+        
+    agr_df = pd.DataFrame(_yrr, index=cols, columns=df.index.year.unique()).T
+    return agr_df
+
+
 ## 그래프 x축 %로 표시
 def percent_formatter(x, pos):
     return f"{int(x)}%"
