@@ -139,10 +139,10 @@ def get_ttr_df(df, assets):
 
     return pd.DataFrame(ttr_dict).interpolate(method='time')    
     
-def get_rr_df(df, assets):
+def get_rr_df(df, assets, years=5):
     data = df[assets]
     data = data.resample('M').last()
-    dfs = split_time_series(data, 12*5)
+    dfs = split_time_series(data, 12*years)
     ## calculate Rolling Returns
     _ls = []
     _idx = []

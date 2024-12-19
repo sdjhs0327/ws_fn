@@ -45,8 +45,8 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None):
     lineplot = sns.lineplot(data=_df, x='Date', y='Value', hue='Ticker', palette=colors, linestyle='-', linewidth=1)
     
     plt.title(f'Trends of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
-    plt.ylabel(f"{data.index[0].year}Y=100", fontsize=14, labelpad=-100, loc="top", rotation=0)
-    plt.xlabel("Date", fontsize=14)
+    plt.ylabel(f"{data.index[0].year}Y=100", fontsize=14, labelpad=-100, loc="top", rotation=0, color=mycolors['color_around'])
+    plt.xlabel("Date", fontsize=14, color=mycolors['color_around'])
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
 
@@ -75,7 +75,7 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None):
             plt.axvspan(adjusted_start, adjusted_end, facecolor=mycolors['color_around'], alpha=0.45)
 
     # Convert x-axis to numeric format
-    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{int(y)}'))
+    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{round(y, 1)}'))
 
     # Show the plot
     plt.tight_layout()
@@ -112,8 +112,8 @@ def asset_histogram_plot(df, assets, bins=50, colors=None):
 
         sns.histplot(data[asset], bins=bins, kde=True, color=color, label=asset, stat="density", ax=ax)
         ax.set_title(f'Return Distribution of {asset}', fontsize=16, fontweight='bold')
-        ax.set_xlabel("Return", fontsize=12)
-        ax.set_ylabel("Density", fontsize=12)
+        ax.set_xlabel("Return", fontsize=12, color=mycolors['color_around'])
+        ax.set_ylabel("Density", fontsize=12, color=mycolors['color_around'])
         ax.legend(title="Asset", fontsize=10)
         ax.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
 
@@ -150,8 +150,8 @@ def asset_histogram_merged_plot(df, assets, bins=50, colors=None):
         sns.histplot(data[asset], bins=bins, kde=True, color=color, label=asset, stat="density")
 
     plt.title(f'Return Distributions of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
-    plt.xlabel("Return", fontsize=14)
-    plt.ylabel("Density", fontsize=14, rotation=0, labelpad=-50, loc="top")
+    plt.xlabel("Return", fontsize=14, color=mycolors['color_around'])
+    plt.ylabel("Density", fontsize=14, rotation=0, labelpad=-50, loc="top", color=mycolors['color_around'])
     plt.legend(title="Assets", fontsize=12)
     plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
     plt.tight_layout()
@@ -193,8 +193,8 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None):
         drawdown_data.plot(ax=ax, color=color, linewidth=1, label=f"{asset} Drawdown")
 
         ax.set_title(f'Drawdown of {asset}', fontsize=16, fontweight='bold')
-        ax.set_xlabel("Date", fontsize=12)
-        ax.set_ylabel("Drawdown", fontsize=12)
+        ax.set_xlabel("Date", fontsize=12, color=mycolors['color_around'])
+        ax.set_ylabel("Drawdown", fontsize=12, color=mycolors['color_around'])
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.0%}'))
         ax.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
 
@@ -245,7 +245,7 @@ def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatili
     # Add labels
     for i, label in enumerate(labels):
         plt.text(
-            x[i], y[i] - abs(y.max() - y.min()) * 0.11, label, fontsize=12, ha="center", va="center", 
+            x[i], y[i] - abs(y.max()) * 0.04, label, fontsize=12, ha="center", va="center", 
             color="white", fontweight="bold", bbox=dict(facecolor=colors[i], edgecolor='none', alpha=0.8, boxstyle="round,pad=0.3")
         )
 
@@ -258,13 +258,54 @@ def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatili
 
     # Axis settings
     plt.title(f"Return-Risk Profile", fontsize=22, fontweight="bold")
-    plt.xlabel("Downside Risk", fontsize=14)
-    plt.ylabel("Return", fontsize=14, rotation=0, labelpad=-50, loc="top")
+    plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
+    plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
     plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
     plt.xlim(0, x.max() * 1.1)
     plt.ylim(0, y.max() * 1.1)
 
     # Layout adjustments
+    plt.tight_layout()
+    plt.show()
+    
+def portfilio_return_risk_profile_plot(process, obtimal, min_risk, cmap=None):
+    # cmap이 None이면 기본 컬러맵 설정
+    if cmap is None:
+        custom_colors = ["#F7FBFF", "#6BAED6", "#08306B"]
+        cmap = LinearSegmentedColormap.from_list("custom", custom_colors)
+    
+    plot_df = process
+    fig, ax = plt.subplots(figsize=figsize)
+
+    x = 'Volatility(Down)'
+    y = 'Return'
+
+    plt.scatter(plot_df[x], plot_df[y], c=process['Sortino Ratio'], marker='o', linewidth=0, alpha=0.7, cmap=cmap, s=100)
+    # % 단위를 추가하는 포맷터 함수 정의
+    def percent_formatter(x, pos):
+        return f"{round(x, 1)}%"
+
+    # X축, Y축에 % 포맷터 적용
+    plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
+    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
+    # 눈금과 축 간격 줄이기
+    plt.gca().tick_params(axis="x", pad=1)  # X축 눈금 패딩 조정
+    plt.gca().tick_params(axis="y", pad=1)  # Y축 눈금 패딩 조정
+
+    # 축 설정
+    plt.title(f"Return-Risk Profile of Portfolio", fontsize=22, fontweight="bold", color=mycolors['color_basic'])
+    plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
+    plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
+    plt.colorbar(label='Sortino Ratio')
+
+    plt.xticks(fontsize=10, color=mycolors['color_around'])
+    plt.yticks(fontsize=10, color=mycolors['color_around'])
+    plt.grid(color=mycolors['color_around2'], linestyle="--", linewidth=0.7, alpha=0.7)
+
+    plt.scatter(plot_df[plot_df['Efficient']][x], plot_df[plot_df['Efficient']][y], c=mycolors['color_norm2'], marker='o', linewidth=0, alpha=0.8, s=100)
+    plt.scatter(obtimal[x][0], obtimal[y][0], marker="*", s=400, alpha=1, c = mycolors['color_norm'])
+    plt.scatter(min_risk[x][0], min_risk[y][0], marker="*", s=400, alpha=1, c = mycolors['color_sub'])
+
     plt.tight_layout()
     plt.show()
 
@@ -309,8 +350,8 @@ def ttr_plot(ttr_df, assets, highlight_periods=highlight_periods, colors=None):
 
         # 제목 및 레이블
         ax.set_title(f'Time to Recovery of {asset}', fontsize=16, fontweight='bold')
-        ax.set_xlabel("Date", fontsize=12)
-        ax.set_ylabel("TTR (Days)", fontsize=12)
+        ax.set_xlabel("Date", fontsize=12, color=mycolors['color_around'])
+        ax.set_ylabel("TTR (Days)", fontsize=12, color=mycolors['color_around'])
         ax.grid(color=mycolors['color_around2'], linestyle="--", linewidth=0.7, alpha=0.7)
         
         # highlight_periods 처리 (MDD 플롯과 동일한 방식)
