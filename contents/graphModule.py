@@ -45,10 +45,10 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None):
     lineplot = sns.lineplot(data=_df, x='Date', y='Value', hue='Ticker', palette=colors, linestyle='-', linewidth=1)
     
     plt.title(f'Trends of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
-    plt.ylabel(f"{data.index[0].year}Y=100", fontsize=14, labelpad=-100, loc="top", rotation=0, color=mycolors['color_around'])
+    plt.ylabel(f"{data.index[0].year}Y=100", fontsize=14, labelpad=-50, loc="top", rotation=0, color=mycolors['color_around'])
     plt.xlabel("Date", fontsize=14, color=mycolors['color_around'])
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+    plt.xticks(fontsize=12, color=mycolors['color_around'])
+    plt.yticks(fontsize=12, color=mycolors['color_around'])
 
     # Adjust tick params
     plt.gca().tick_params(axis="y", pad=1)
@@ -212,7 +212,7 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None):
         ax.annotate(f"{min_value:.2%}", xy=(min_date, min_value), xytext=(min_date, min_value - 0.03),
                     fontsize=10, color=color)
 
-        ax.legend()
+        ## ax.legend()
 
     plt.tight_layout()
     plt.show()
@@ -379,7 +379,7 @@ def ttr_plot(ttr_df, assets, highlight_periods=highlight_periods, colors=None):
                         xytext=(max_date, max_value + (max_value * 0.02)), # 조금 위에 표시
                         fontsize=10, color=color)
         
-        ax.legend()
+        ## ax.legend()
 
     plt.tight_layout()
     plt.show()
