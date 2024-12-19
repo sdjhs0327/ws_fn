@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings('ignore')
+from quant_functions import anal_funcs
 
 def simulate_portfolio_assets(asset_rets_df, weights_list, initial_investment=100):
     """
@@ -95,3 +96,58 @@ def calc_agr(df):
 ## 그래프 x축 %로 표시
 def percent_formatter(x, pos):
     return f"{int(x)}%"
+
+
+
+def get_ttr_df(df, assets):
+    """
+    Prepares TTR data for multiple assets.
+
+    Parameters:
+        df (DataFrame): A DataFrame containing cumulative return data for assets.
+        assets (list): List of asset names in the DataFrame.
+
+    Returns:
+        pd.DataFrame: TTR data for each asset as a series.
+    """
+    def calculate_ttr_series(drawdown_series):
+        ttr_data = []
+        ttr_index = []
+        in_drawdown = False
+        start_date = None
+
+        for date, value in drawdown_series.items():
+            if value < 0 and not in_drawdown:
+                # Start of a drawdown
+                in_drawdown = True
+                start_date = date
+            elif value == 0 and in_drawdown:
+                # Recovery point
+                in_drawdown = False
+                ttr_data.append((date - start_date).days)  # TTR in days
+                ttr_index.append(date)
+
+        return pd.Series(ttr_data, index=ttr_index)
+
+    ttr_dict = {}
+
+    for asset in assets:
+        # Calculate drawdown
+        drawdown = df[asset] / df[asset].cummax() - 1
+        # Calculate TTR
+        ttr_dict[asset] = calculate_ttr_series(drawdown)
+
+    return pd.DataFrame(ttr_dict).interpolate(method='time')    
+    
+def get_rr_df(df, assets):
+    data = df[assets]
+    data = data.resample('M').last()
+    dfs = split_time_series(data, 12*5)
+    ## calculate Rolling Returns
+    _ls = []
+    _idx = []
+    for _df in dfs:
+        _ls.append([anal_funcs.cal_YRR(_df, col, method ='a', unit = 'monthly') for col in _df.columns])
+        _idx.append(_df.index[0])  
+    res = pd.DataFrame(_ls, columns = _df.columns, index=_idx)
+    return res
