@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 from sympy import Symbol, solve, solveset, Interval
 from sklearn.linear_model import LinearRegression
+import random
 
 
 class anal_funcs(object):    
@@ -346,7 +347,35 @@ class anal_funcs(object):
         Neg_inx['Negative'] = gRaw[Neg_inx.index]
 
         return Pos_inx, Neg_inx
+  
+    def cal_kelly_value(self, win_ratio, loss_rate, return_rate):
+        # 손익비율 b 계산
+        b = return_rate / loss_rate
+        # 켈리 공식 적용
+        kelly_value = (b * win_ratio - (1 - win_ratio)) / b
+        return kelly_value
     
+    def monte_carlo_simulation(self, win_ratio, loss_rate, return_rate, seed, steps=60, simulations = 1000, bet_ratio = 1):
+        monte_ls = []
+        for _ in range(simulations):
+            # 단계별 시뮬레이션 진행 
+            x_0 = seed
+            unit_ls = [x_0]
+            for _ in range(steps):
+                if x_0 <= 0:
+                    unit_ls.extend([0] * (steps - len(unit_ls) + 1))
+                    break
+                # 랜덤 성공/실패 결정
+                if random.uniform(0, 1) < win_ratio:  # 성공
+                    x_0 += x_0 * bet_ratio * return_rate
+                else:  # 실패
+                    x_0 -= x_0 * bet_ratio * loss_rate
+                unit_ls.append(x_0)
+            unit_res = pd.Series(unit_ls)
+            monte_ls.append(unit_res)
+        return pd.DataFrame(monte_ls).T
+
+ 
 class data_funcs(object):    
     def __init__(self):
         self.info = '데이터를 불러오고 병합 계량하는 함수를 정리함'
