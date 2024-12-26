@@ -3,6 +3,7 @@ import pandas as pd
 import warnings
 warnings.filterwarnings('ignore')
 from quant_functions import anal_funcs
+from sklearn.ensemble import GradientBoostingRegressor
 
 def simulate_portfolio_assets(asset_rets_df, weights_list, initial_investment=100):
     """
@@ -54,6 +55,25 @@ def imputation(df, basis_name, target_name):
     dataset[target_name] = df_imputed[target_name]
     print(beta)
     return dataset
+
+## ML을 이용한 imputation
+def MLimputation(df, X_cols, y_col):
+    df = df.copy()
+    rets = df.pct_change()
+
+    X_train = rets[rets[y_col].notna()][X_cols].dropna()
+    y_train = rets[rets[y_col].notna()][y_col].dropna()
+    X_test = rets[rets[y_col].isna()][X_cols].dropna()
+
+    model = GradientBoostingRegressor(random_state=17)
+    model.fit(X_train, y_train)
+
+    hat = pd.DataFrame(model.predict(X_test), index=X_test.index, columns=[y_col])
+
+    rets[y_col] = rets[y_col].fillna(hat[y_col]).fillna(0)
+    df[y_col] = (rets[y_col]+1).cumprod()
+    return df
+
 
 ## 주요 이평선 ## 피보나치
 def get_signals(df, target):
