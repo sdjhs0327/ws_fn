@@ -21,7 +21,7 @@ highlight_periods = [(shock_cases['1차오일쇼크_t0'], shock_cases['1차오�
                      (shock_cases['금융위기_t0'], shock_cases['금융위기_t1']),
                      (shock_cases['코로나_t0'], shock_cases['코로나_t1'])]
 
-def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None):
+def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, title=True):
     """
     Plots a cumulative return graph for given assets.
 
@@ -42,9 +42,11 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None):
     if colors is None:
         colors = sns.color_palette('tab10', len(assets))
 
-    lineplot = sns.lineplot(data=_df, x='Date', y='Value', hue='Ticker', palette=colors, linestyle='-', linewidth=1)
-    
-    plt.title(f'Trends of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
+    lineplot = sns.lineplot(data=_df, x='Date', y='Value', hue='Ticker', palette=colors, linestyle='-', linewidth=2)
+    if title:
+        plt.title(f'Trends of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
+    else:
+        pass
     plt.ylabel(f"{data.index[0].year}Y=100", fontsize=14, labelpad=-50, loc="top", rotation=0, color=mycolors['color_around'])
     plt.xlabel("Date", fontsize=14, color=mycolors['color_around'])
     plt.xticks(fontsize=12, color=mycolors['color_around'])
@@ -82,7 +84,7 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None):
     plt.show()
 
 
-def asset_histogram_plot(df, assets, bins=50, colors=None):
+def asset_histogram_plot(df, assets, bins=50, colors=None, title=True):
     """
     Plots histograms for the returns of given assets, separated into individual horizontal subplots.
 
@@ -111,7 +113,10 @@ def asset_histogram_plot(df, assets, bins=50, colors=None):
         var_5_percent = np.percentile(data[asset].dropna(), 5)
 
         sns.histplot(data[asset], bins=bins, kde=True, color=color, label=asset, stat="density", ax=ax)
-        ax.set_title(f'Return Distribution of {asset}', fontsize=16, fontweight='bold')
+        if title:
+            ax.set_title(f'Return Distribution of {asset}', fontsize=16, fontweight='bold')
+        else:
+            pass
         ax.set_xlabel("Return", fontsize=12, color=mycolors['color_around'])
         ax.set_ylabel("Density", fontsize=12, color=mycolors['color_around'])
         ax.legend(title="Asset", fontsize=10)
@@ -126,7 +131,7 @@ def asset_histogram_plot(df, assets, bins=50, colors=None):
     plt.show()
 
 
-def asset_histogram_merged_plot(df, assets, bins=50, colors=None):
+def asset_histogram_merged_plot(df, assets, bins=50, colors=None, title=True):
     """
     Plots a histogram for the returns of given assets.
 
@@ -149,7 +154,10 @@ def asset_histogram_merged_plot(df, assets, bins=50, colors=None):
     for asset, color in zip(assets, colors):
         sns.histplot(data[asset], bins=bins, kde=True, color=color, label=asset, stat="density")
 
-    plt.title(f'Return Distributions of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
+    if title:
+        plt.title(f'Return Distributions of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
+    else:
+        pass
     plt.xlabel("Return", fontsize=14, color=mycolors['color_around'])
     plt.ylabel("Density", fontsize=14, rotation=0, labelpad=-50, loc="top", color=mycolors['color_around'])
     plt.legend(title="Assets", fontsize=12)
@@ -158,7 +166,7 @@ def asset_histogram_merged_plot(df, assets, bins=50, colors=None):
     plt.show()
 
 
-def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None):
+def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None, title=True):
     """
     Plots drawdown graphs for given assets.
 
@@ -192,7 +200,10 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None):
         drawdown_data = drawdowns[asset]
         drawdown_data.plot(ax=ax, color=color, linewidth=1, label=f"{asset} Drawdown")
 
-        ax.set_title(f'Drawdown of {asset}', fontsize=16, fontweight='bold')
+        if title:
+            ax.set_title(f'Drawdown of {asset}', fontsize=16, fontweight='bold')
+        else:
+            pass
         ax.set_xlabel("Date", fontsize=12, color=mycolors['color_around'])
         ax.set_ylabel("Drawdown", fontsize=12, color=mycolors['color_around'])
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.0%}'))
@@ -218,7 +229,7 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None):
     plt.show()
 
 
-def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatility(Down)', colors=None):
+def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatility(Down)', colors=None, title=True):
     """
     Enhanced Return vs Downside Risk plot with improved design and annotations.
     """
@@ -257,7 +268,10 @@ def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatili
     plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
 
     # Axis settings
-    plt.title(f"Return-Risk Profile", fontsize=22, fontweight="bold")
+    if title:
+        plt.title(f"Return-Risk Profile", fontsize=22, fontweight="bold")
+    else:
+        pass
     plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
     plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
     plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
@@ -268,7 +282,7 @@ def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatili
     plt.tight_layout()
     plt.show()
     
-def portfilio_return_risk_profile_plot(process, obtimal, min_risk, cmap=None):
+def portfilio_return_risk_profile_plot(process, obtimal, min_risk, cmap=None, title=True):
     # cmap이 None이면 기본 컬러맵 설정
     if cmap is None:
         custom_colors = ["#F7FBFF", "#6BAED6", "#08306B"]
@@ -293,7 +307,10 @@ def portfilio_return_risk_profile_plot(process, obtimal, min_risk, cmap=None):
     plt.gca().tick_params(axis="y", pad=1)  # Y축 눈금 패딩 조정
 
     # 축 설정
-    plt.title(f"Return-Risk Profile of Portfolio", fontsize=22, fontweight="bold", color=mycolors['color_basic'])
+    if title:
+        plt.title(f"Return-Risk Profile of Portfolio", fontsize=22, fontweight="bold", color=mycolors['color_basic'])
+    else:
+        pass
     plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
     plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
     plt.colorbar(label='Sortino Ratio')
@@ -309,7 +326,7 @@ def portfilio_return_risk_profile_plot(process, obtimal, min_risk, cmap=None):
     plt.tight_layout()
     plt.show()
 
-def ttr_plot(ttr_df, assets, highlight_periods=highlight_periods, colors=None):
+def ttr_plot(ttr_df, assets, highlight_periods=highlight_periods, colors=None, title=True):
     """
     Plots TTR (Time to Recovery) graphs for given assets in a similar style to the MDD plot.
 
@@ -349,7 +366,10 @@ def ttr_plot(ttr_df, assets, highlight_periods=highlight_periods, colors=None):
         ttr_data.plot(ax=ax, color=color, linewidth=2, label=f"{asset} TTR")
 
         # 제목 및 레이블
-        ax.set_title(f'Time to Recovery of {asset}', fontsize=16, fontweight='bold')
+        if title:
+            ax.set_title(f'Time to Recovery of {asset}', fontsize=16, fontweight='bold')
+        else:
+            pass
         ax.set_xlabel("Date", fontsize=12, color=mycolors['color_around'])
         ax.set_ylabel("TTR (Days)", fontsize=12, color=mycolors['color_around'])
         ax.grid(color=mycolors['color_around2'], linestyle="--", linewidth=0.7, alpha=0.7)
@@ -385,7 +405,7 @@ def ttr_plot(ttr_df, assets, highlight_periods=highlight_periods, colors=None):
     plt.show()
 
 
-def rr_trend_plot(rr_df, assets, highlight_periods=highlight_periods, colors=None):
+def rr_trend_plot(rr_df, assets, highlight_periods=highlight_periods, colors=None, title=True):
     """
     Plots trends of rolling returns for given assets.
 
@@ -406,8 +426,11 @@ def rr_trend_plot(rr_df, assets, highlight_periods=highlight_periods, colors=Non
 
     plt.figure(figsize=figsize)
     lineplot = sns.lineplot(data=_df, x='Date', y='Value', hue='Ticker', palette=colors, linestyle='-', linewidth=2)
-    plt.title(f'Trends of 5Y Rolling Returns ({rr_df.index[0].year}~{rr_df.index[-1].year})', 
+    if title:
+        plt.title(f'Trends of 5Y Rolling Returns ({rr_df.index[0].year}~{rr_df.index[-1].year})', 
               fontsize=22, fontweight='bold', color=mycolors['color_basic'])
+    else:
+        pass
     plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
     plt.xlabel("")
     plt.xticks(fontsize=12, color=mycolors['color_around'])
@@ -441,7 +464,7 @@ def rr_trend_plot(rr_df, assets, highlight_periods=highlight_periods, colors=Non
     plt.show()
     
     
-def rr_box_plot(rr_df, assets, colors=None):
+def rr_box_plot(rr_df, assets, colors=None, title=True):
     """
     Plots a box plot of rolling returns for given assets.
 
@@ -462,8 +485,11 @@ def rr_box_plot(rr_df, assets, colors=None):
                           boxprops=dict(edgecolor=mycolors['color_basic'], linewidth=0))
 
     # 제목, 라벨, 티크 스타일 적용 (mycolors는 외부에서 정의되어 있다고 가정)
-    plt.title(f'Distribution of 5Y Rolling Returns ({rr_df.index[0].year}~{rr_df.index[-1].year})',
+    if title:
+        plt.title(f'Distribution of 5Y Rolling Returns ({rr_df.index[0].year}~{rr_df.index[-1].year})',
               fontsize=22, fontweight='bold', color=mycolors['color_basic'])
+    else:
+        pass
     plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
     plt.xlabel("")
     plt.xticks(fontsize=12, color=mycolors['color_around'])
@@ -490,7 +516,7 @@ def rr_box_plot(rr_df, assets, colors=None):
     plt.show()
     
     
-def corr_plot(corr_df, cmap=None):
+def corr_plot(corr_df, cmap=None, title=True):
     # cmap이 None이면 기본 컬러맵 설정
     if cmap is None:
         custom_colors = ["#F7FBFF", "#6BAED6", "#08306B"]
@@ -500,7 +526,10 @@ def corr_plot(corr_df, cmap=None):
     plt.figure(figsize=figsize)
     sns.heatmap(corr_df, annot=True, cmap=cmap, fmt='.2f',
                 linewidths=0.5, cbar_kws={"shrink": .8}, cbar=False, annot_kws={"size": 12})
-    plt.title('Asset Correlations', fontsize=22, fontweight="bold", color=mycolors['color_basic'])
+    if title:
+        plt.title('Asset Correlations', fontsize=22, fontweight="bold", color=mycolors['color_basic'])
+    else:
+        pass
     plt.ylabel("Assets", fontsize=14, labelpad=-50, color=mycolors['color_around'], loc="top", rotation=0)
     plt.xlabel("")
     plt.yticks(rotation=0, fontsize=12, color=mycolors['color_around'])
