@@ -39,10 +39,14 @@ def split_time_series(df, n_days):
     return dfs
 
 ## beta를 이용한 imputation
-def imputation(df, basis_name, target_name):
+def imputation(df, basis_name, target_name, log_diff=True):
     dataset = df.copy()
-    ori_rets = np.log(dataset[[target_name]]).diff()
-    rets = np.log(dataset[[target_name, basis_name]].dropna(subset=[basis_name])).diff()
+    if log_diff:
+        ori_rets = np.log(dataset[[target_name]]).diff()
+        rets = np.log(dataset[[target_name, basis_name]].dropna(subset=[basis_name])).diff()
+    else:
+        ori_rets = dataset[[target_name]].diff()
+        rets = dataset[[target_name, basis_name]].dropna(subset=[basis_name]).diff()
     # 공분산과 분산 계산
     cov_matrix = np.cov(rets.dropna()[target_name], rets.dropna()[basis_name])
     cov_stock_market = cov_matrix[0, 1]  # 공분산
@@ -51,8 +55,14 @@ def imputation(df, basis_name, target_name):
     beta = cov_stock_market / var_market
     ori_rets[target_name][ori_rets[target_name].isna()] = rets[basis_name]*beta
     ori_rets = ori_rets.fillna(0)
-    df_imputed = np.exp(ori_rets.cumsum())
-    dataset[target_name] = df_imputed[target_name]
+    if log_diff:
+        df_imputed = np.exp(ori_rets.cumsum())
+        dataset[target_name] = df_imputed[target_name]
+    else:
+        df_imputed = ori_rets.cumsum()
+        df_imputed = df_imputed + dataset[target_name].mean() - df_imputed.mean()
+        dataset[target_name][dataset[target_name].isna()] = df_imputed[target_name][dataset[target_name].isna()] 
+    
     print(beta)
     return dataset
 
