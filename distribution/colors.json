@@ -1,0 +1,17 @@
+{
+  "color_basic": "#323232",
+  "color_around": "#6E6E6E",
+  "color_around2": "#E0E0E0",
+
+  "color_norm": "#D12C45",
+  "color_norm2": "#8E001C",
+  "color_norm3": "#F18AA0",
+  
+  "color_cont": "#1E9FCC",
+  "color_cont2": "#0E5570",
+  "color_cont3": "#66C2DD", 
+  
+  "color_sub": "#E59400",
+  "color_sub2": "#7A4E00",
+  "color_sub3": "#F3BD5E"
+}

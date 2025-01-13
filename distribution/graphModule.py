@@ -5,7 +5,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
+
 figsize=(12, 8)
+## 한글, 마이너스 깨짐 방지
+plt.rcParams["figure.figsize"] = figsize
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
+
 ## shock case
 with open('shockCase.json', encoding='utf-8') as f:
     shock_cases = json.load(f)
@@ -90,9 +96,6 @@ def asset_histogram_plot(df, assets, bins=50, colors=None, title=True):
         assets (list): List of asset column names to include in the plot.
         bins (int): Number of bins for the histogram.
         colors (list): List of colors for the histogram bars, must match the number of assets.
-
-    Returns:
-        None
     """
     data = df[assets].copy()
 
@@ -214,7 +217,7 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None, 
                     continue
                 adjusted_start = max(start_date, x_min)
                 adjusted_end = min(end_date, x_max)
-                ax.axvspan(adjusted_start, adjusted_end, facecolor=mycolors['color_around'], alpha=0.45)
+                ax.axvspan(adjusted_start, adjusted_end, facecolor=mycolors['color_around'], alpha=0.30)
 
         # Mark and annotate MDD
         min_date = drawdown_data.idxmin()
@@ -227,104 +230,7 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None, 
 
     plt.tight_layout()
     plt.show()
-
-
-def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatility(Down)', colors=None, title=True):
-    """
-    Enhanced Return vs Downside Risk plot with improved design and annotations.
-    """
-    data = df[[target_col, risk_col]].copy()
-    data.index = assets  # Set index as asset names
-
-    # Calculate Sortino Ratios
-    data['Sortino Ratio'] = data[target_col] / data[risk_col]
-
-    # Use provided colors or default palette
-    if colors is None:
-        colors = sns.color_palette('tab10', len(assets))
-
-    # Graph settings
-    plt.figure(figsize=figsize)
-    sizes = 500
-
-    x = data[risk_col]
-    y = data[target_col]
-    labels = data.index
-
-    scatter = plt.scatter(x, y, c=colors, s=sizes, edgecolors="white", linewidth=2, alpha=0.9)
-
-    # Add labels
-    for i, label in enumerate(labels):
-        plt.text(
-            x[i], y[i] - abs(y.max()) * 0.04, label, fontsize=12, ha="center", va="center", 
-            color="white", fontweight="bold", bbox=dict(facecolor=colors[i], edgecolor='none', alpha=0.8, boxstyle="round,pad=0.3")
-        )
-
-    # Axis formatters
-    def percent_formatter(x, pos):
-        return f"{round(x, 1)}%"
-
-    plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
-    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
-
-    # Axis settings
-    if title:
-        plt.title(f"Return-Risk Profile", fontsize=22, fontweight="bold")
-    else:
-        pass
-    plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
-    plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
-    plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
-    plt.xlim(0, x.max() * 1.1)
-    plt.ylim(0, y.max() * 1.1)
-
-    # Layout adjustments
-    plt.tight_layout()
-    plt.show()
     
-def portfilio_return_risk_profile_plot(process, obtimal, min_risk, cmap=None, title=True):
-    # cmap이 None이면 기본 컬러맵 설정
-    if cmap is None:
-        custom_colors = ["#F7FBFF", "#6BAED6", "#08306B"]
-        cmap = LinearSegmentedColormap.from_list("custom", custom_colors)
-    
-    plot_df = process
-    fig, ax = plt.subplots(figsize=figsize)
-
-    x = 'Volatility(Down)'
-    y = 'Return'
-
-    plt.scatter(plot_df[x], plot_df[y], c=process['Sortino Ratio'], marker='o', linewidth=0, alpha=0.7, cmap=cmap, s=100)
-    # % 단위를 추가하는 포맷터 함수 정의
-    def percent_formatter(x, pos):
-        return f"{round(x, 1)}%"
-
-    # X축, Y축에 % 포맷터 적용
-    plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
-    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
-    # 눈금과 축 간격 줄이기
-    plt.gca().tick_params(axis="x", pad=1)  # X축 눈금 패딩 조정
-    plt.gca().tick_params(axis="y", pad=1)  # Y축 눈금 패딩 조정
-
-    # 축 설정
-    if title:
-        plt.title(f"Return-Risk Profile of Portfolio", fontsize=22, fontweight="bold", color=mycolors['color_basic'])
-    else:
-        pass
-    plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
-    plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
-    plt.colorbar(label='Sortino Ratio')
-
-    plt.xticks(fontsize=10, color=mycolors['color_around'])
-    plt.yticks(fontsize=10, color=mycolors['color_around'])
-    plt.grid(color=mycolors['color_around2'], linestyle="--", linewidth=0.7, alpha=0.7)
-
-    plt.scatter(plot_df[plot_df['Efficient']][x], plot_df[plot_df['Efficient']][y], c=mycolors['color_norm2'], marker='o', linewidth=0, alpha=0.8, s=100)
-    plt.scatter(obtimal[x][0], obtimal[y][0], marker="*", s=400, alpha=1, c = mycolors['color_norm'])
-    plt.scatter(min_risk[x][0], min_risk[y][0], marker="*", s=400, alpha=1, c = mycolors['color_sub'])
-
-    plt.tight_layout()
-    plt.show()
 
 def ttr_plot(ttr_df, assets, highlight_periods=highlight_periods, colors=None, title=True):
     """
@@ -523,6 +429,13 @@ def rr_box_plot(rr_df, assets, colors=None, title=True):
     
     
 def corr_plot(corr_df, cmap=None, title=True):
+    """
+    Plots a heatmap of the correlation matrix.
+    Parameters:
+        corr_df (DataFrame): DataFrame containing the correlation matrix.
+        cmap (str, optional): Colormap to use for the heatmap. If None, uses a custom colormap.
+        figsize (tuple, optional): Figure size. Default is (12, 8).
+    """
     # cmap이 None이면 기본 컬러맵 설정
     if cmap is None:
         custom_colors = ["#F7FBFF", "#6BAED6", "#08306B"]
