@@ -220,7 +220,7 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None, 
         min_date = drawdown_data.idxmin()
         min_value = drawdown_data.min()
         ax.scatter(min_date, min_value, color=color, zorder=5)
-        ax.annotate(f"{min_value:.2%}", xy=(min_date, min_value), xytext=(min_date, min_value - 0.03),
+        ax.annotate(f"{min_value:.2%}", xy=(min_date, min_value), xytext=(min_date, min_value + min_value*0.03),
                     fontsize=10, color=color)
 
         ## ax.legend()
