@@ -6,6 +6,12 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
 figsize=(12, 8)
+## 한글, 마이너스 깨짐 방지
+plt.rcParams["figure.figsize"] = figsize
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
+
+figsize=(12, 8)
 ## shock case
 with open('shockCase.json', encoding='utf-8') as f:
     shock_cases = json.load(f)
