@@ -11,7 +11,6 @@ plt.rcParams["figure.figsize"] = figsize
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 
-figsize=(12, 8)
 ## shock case
 with open('shockCase.json', encoding='utf-8') as f:
     shock_cases = json.load(f)

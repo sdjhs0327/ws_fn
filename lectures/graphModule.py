@@ -26,7 +26,7 @@ highlight_periods = [(shock_cases['1차오일쇼크_t0'], shock_cases['1차오�
                      (shock_cases['금융위기_t0'], shock_cases['금융위기_t1']),
                      (shock_cases['코로나_t0'], shock_cases['코로나_t1'])]
 
-def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, title=True):
+def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, title=True, yscale='log'):
     """
     Plots a cumulative return graph for given assets.
 
@@ -56,9 +56,9 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, tit
 
     # Adjust tick params
     plt.gca().tick_params(axis="y", pad=1)
-
-    # Set y-axis to logarithmic scale
-    plt.yscale('log')
+    if yscale == 'log':
+        # Set y-axis to logarithmic scale
+        plt.yscale('log')
 
     # Add grid
     plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
@@ -86,7 +86,7 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, tit
     plt.show()
 
 
-def asset_histogram_plot(df, assets, bins=50, colors=None, title=True):
+def asset_histogram_plot(df, assets, bins=50, colors=None, title=True, var_value=5):
     """
     Plots histograms for the returns of given assets, separated into individual horizontal subplots.
 
@@ -109,7 +109,7 @@ def asset_histogram_plot(df, assets, bins=50, colors=None, title=True):
         axes = [axes]  # Ensure axes is iterable for a single asset
 
     for ax, asset, color in zip(axes, assets, colors):
-        var_5_percent = np.percentile(data[asset].dropna(), 5)
+        var_5_percent = np.percentile(data[asset].dropna(), var_value)
 
         sns.histplot(data[asset], bins=bins, kde=True, color=color, label=asset, stat="density", ax=ax)
         if title:
@@ -122,7 +122,7 @@ def asset_histogram_plot(df, assets, bins=50, colors=None, title=True):
         ax.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
 
         ax.axvline(var_5_percent, color=mycolors['color_around'], linestyle="--", linewidth=1)
-        ax.annotate(f"VaR(5%) {var_5_percent:.2%}", xy=(var_5_percent, ax.get_ylim()[1] * 0.5),
+        ax.annotate(f"VaR({var_value}%) {var_5_percent:.2%}", xy=(var_5_percent, ax.get_ylim()[1] * 0.5),
                     xytext=(var_5_percent + (data[asset].max() * 0.01), ax.get_ylim()[1] * 0.95),
                     fontsize=12, color=color, fontweight='bold')
 
