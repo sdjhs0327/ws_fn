@@ -454,3 +454,57 @@ def corr_plot(corr_df, cmap=None, title=True):
     plt.xticks(rotation=0, fontsize=12, color=mycolors['color_around'])
     plt.tight_layout()
     plt.show()
+    
+    
+def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatility(Down)', colors=None, title=True):
+    """
+    Enhanced Return vs Downside Risk plot with improved design and annotations.
+    """
+    data = df[[target_col, risk_col]].copy()
+    data.index = assets  # Set index as asset names
+
+    # Calculate Sortino Ratios
+    data['Sortino Ratio'] = data[target_col] / data[risk_col]
+
+    # Use provided colors or default palette
+    if colors is None:
+        colors = sns.color_palette('tab10', len(assets))
+
+    # Graph settings
+    plt.figure(figsize=figsize)
+    sizes = 500
+
+    x = data[risk_col]
+    y = data[target_col]
+    labels = data.index
+
+    scatter = plt.scatter(x, y, c=colors, s=sizes, edgecolors="white", linewidth=2, alpha=0.9)
+
+    # Add labels
+    for i, label in enumerate(labels):
+        plt.text(
+            x[i], y[i] - abs(y.max()) * 0.04, label, fontsize=12, ha="center", va="center", 
+            color="white", fontweight="bold", bbox=dict(facecolor=colors[i], edgecolor='none', alpha=0.8, boxstyle="round,pad=0.3")
+        )
+
+    # Axis formatters
+    def percent_formatter(x, pos):
+        return f"{round(x, 1)}%"
+
+    plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
+    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
+
+    # Axis settings
+    if title:
+        plt.title(f"Return-Risk Profile", fontsize=22, fontweight="bold")
+    else:
+        pass
+    plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
+    plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
+    plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
+    plt.xlim(0, x.max() * 1.1)
+    plt.ylim(0, y.max() * 1.1)
+
+    # Layout adjustments
+    plt.tight_layout()
+    plt.show()
