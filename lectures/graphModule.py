@@ -508,3 +508,47 @@ def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatili
     # Layout adjustments
     plt.tight_layout()
     plt.show()
+    
+def portfilio_return_risk_profile_plot(process, obtimal, min_risk, cmap=None, title=True):
+    # cmap이 None이면 기본 컬러맵 설정
+    if cmap is None:
+        custom_colors = ["#F7FBFF", "#6BAED6", "#08306B"]
+        cmap = LinearSegmentedColormap.from_list("custom", custom_colors)
+    
+    plot_df = process
+    fig, ax = plt.subplots(figsize=figsize)
+
+    x = 'Volatility(Down)'
+    y = 'Return'
+
+    plt.scatter(plot_df[x], plot_df[y], c=process['Sortino Ratio'], marker='o', linewidth=0, alpha=0.7, cmap=cmap, s=100)
+    # % 단위를 추가하는 포맷터 함수 정의
+    def percent_formatter(x, pos):
+        return f"{round(x, 1)}%"
+
+    # X축, Y축에 % 포맷터 적용
+    plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
+    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(percent_formatter))
+    # 눈금과 축 간격 줄이기
+    plt.gca().tick_params(axis="x", pad=1)  # X축 눈금 패딩 조정
+    plt.gca().tick_params(axis="y", pad=1)  # Y축 눈금 패딩 조정
+
+    # 축 설정
+    if title:
+        plt.title(f"Return-Risk Profile of Portfolio", fontsize=22, fontweight="bold", color=mycolors['color_basic'])
+    else:
+        pass
+    plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
+    plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
+    plt.colorbar(label='Sortino Ratio')
+
+    plt.xticks(fontsize=10, color=mycolors['color_around'])
+    plt.yticks(fontsize=10, color=mycolors['color_around'])
+    plt.grid(color=mycolors['color_around2'], linestyle="--", linewidth=0.7, alpha=0.7)
+
+    plt.scatter(plot_df[plot_df['Efficient']][x], plot_df[plot_df['Efficient']][y], c=mycolors['color_norm2'], marker='o', linewidth=0, alpha=0.8, s=100)
+    plt.scatter(obtimal[x][0], obtimal[y][0], marker="*", s=400, alpha=1, c = mycolors['color_norm'])
+    plt.scatter(min_risk[x][0], min_risk[y][0], marker="*", s=400, alpha=1, c = mycolors['color_sub'])
+
+    plt.tight_layout()
+    plt.show()
