@@ -10,6 +10,7 @@ figsize=(12, 8)
 plt.rcParams["figure.figsize"] = figsize
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
+sns.set_theme(style="whitegrid", rc={'axes.unicode_minus': False})
 
 ## shock case
 with open('shockCase.json', encoding='utf-8') as f:
@@ -234,7 +235,7 @@ def drawdown_plot(df, assets, highlight_periods=highlight_periods, colors=None, 
     plt.show()
 
 
-def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatility(Down)', colors=None, title=True):
+def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatility(Down)', colors=None, title=True, auto_lim = False):
     """
     Enhanced Return vs Downside Risk plot with improved design and annotations.
     """
@@ -280,8 +281,9 @@ def return_risk_profile_plot(df, assets, target_col='Return', risk_col='Volatili
     plt.xlabel("Risk", fontsize=14, color=mycolors['color_around'])
     plt.ylabel("Return", fontsize=14, labelpad=-40, color=mycolors['color_around'], loc="top", rotation=0)
     plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
-    plt.xlim(0, x.max() * 1.1)
-    plt.ylim(0, y.max() * 1.1)
+    if auto_lim == False:
+        plt.xlim(0, x.max() * 1.1)
+        plt.ylim(0, y.max() * 1.1)
 
     # Layout adjustments
     plt.tight_layout()
