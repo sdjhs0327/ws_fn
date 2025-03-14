@@ -110,4 +110,5 @@ class BaseLoader:
     def save_df(self):
         self.loader()
         self.df_imp.to_csv('trend_data.csv', encoding='utf-8')
+        self.df_ori.to_csv('origin_data.csv', encoding='utf-8')
         
