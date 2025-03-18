@@ -75,7 +75,7 @@ class BaseLoader:
     
     def get_target_df(self):
         ## 프로젝트마다 필요한 데이터
-        tickers = ['SCHD', 'SPY', 'QQQ', 'UPRO', 'TQQQ', 'TLT', 'IEF', 'SHY', 'IAU', 'SGOV']
+        tickers = ['SCHD', 'SPY', 'QQQ', 'QLD', 'UPRO', 'TQQQ', 'TLT', 'IEF', 'SHY', 'IAU', 'SGOV']
         df_ori = yf.download(tickers, ignore_tz = True, auto_adjust=True)
         df_ori = df_ori['Close']
         
@@ -84,12 +84,13 @@ class BaseLoader:
     def impute_target_df(self, df_ori, df_ref_scaled):
         ## Imputation
         ## 보간 시계열 데이터
-        tickers = ['SCHD', 'SPY', 'QQQ', 'UPRO', 'TQQQ', 'TLT', 'IEF', 'SHY', 'IAU', 'SGOV']
+        tickers = ['SCHD', 'SPY', 'QQQ', 'QLD', 'UPRO', 'TQQQ', 'TLT', 'IEF', 'SHY', 'IAU', 'SGOV']
         df_imp = pd.concat([df_ref_scaled, df_ori], axis=1)
         df_imp = mf.imputation(df_imp, 'Div', 'SCHD')
         df_imp = mf.imputation(df_imp, 'S&P500', 'SPY')
         df_imp = mf.imputation(df_imp, 'NASDAQ', 'QQQ')
         df_imp = mf.imputation(df_imp, 'SPY', 'UPRO')
+        df_imp = mf.imputation(df_imp, 'QQQ', 'QLD')
         df_imp = mf.imputation(df_imp, 'QQQ', 'TQQQ')
         df_imp = mf.imputation(df_imp, 'DGS20', 'TLT')
         df_imp = mf.imputation(df_imp, 'TLT', 'IEF')
