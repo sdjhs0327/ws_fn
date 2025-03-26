@@ -3,14 +3,21 @@ import pandas as pd
 import json
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 from matplotlib.colors import LinearSegmentedColormap
 
-figsize=(12, 8)
-## 한글, 마이너스 깨짐 방지
-plt.rcParams["figure.figsize"] = figsize
-plt.rcParams['font.family'] = 'Malgun Gothic'
-plt.rcParams['axes.unicode_minus'] = False
+# 한글, 마이너스 깨짐 방지
 sns.set_theme(style="whitegrid", rc={'axes.unicode_minus': False})
+plt.rcParams["figure.figsize"] = (12, 8)
+available_fonts = [f.name for f in fm.fontManager.ttflist]
+if "NanumGothic" in available_fonts:
+    plt.rcParams["font.family"] = "NanumGothic"
+elif "AppleGothic" in available_fonts:
+    plt.rcParams["font.family"] = "AppleGothic"
+else:
+    plt.rcParams["font.family"] = "sans-serif"  # 기본 폰트로 대체
+plt.rcParams['axes.unicode_minus'] = False
+figsize = (12, 8)
 
 ## shock case
 with open('shockCase.json', encoding='utf-8') as f:
@@ -27,7 +34,7 @@ highlight_periods = [(shock_cases['1차오일쇼크_t0'], shock_cases['1차오�
                      (shock_cases['금융위기_t0'], shock_cases['금융위기_t1']),
                      (shock_cases['코로나_t0'], shock_cases['코로나_t1'])]
 
-def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, title=True):
+def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, title=True, yscale='log'):
     """
     Plots a cumulative return graph for given assets.
 
@@ -45,7 +52,7 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, tit
     if colors is None:
         colors = sns.color_palette('tab10', len(assets))
 
-    lineplot = sns.lineplot(data=_df, x='Date', y='Value', hue='Ticker', palette=colors, linestyle='-', linewidth=2)
+    sns.lineplot(data=_df, x='Date', y='Value', hue='Ticker', palette=colors, linestyle='-', linewidth=2)
     if title:
         plt.title(f'Trends of {", ".join(assets)} ({data.index[0].year}~{data.index[-1].year})', fontsize=22, fontweight='bold')
     else:
@@ -59,7 +66,8 @@ def trend_plot(df, assets, highlight_periods=highlight_periods, colors=None, tit
     plt.gca().tick_params(axis="y", pad=1)
 
     # Set y-axis to logarithmic scale
-    plt.yscale('log')
+    if yscale == 'log':
+        plt.yscale('log')
 
     # Add grid
     plt.grid(color=mycolors["color_around2"], linestyle="--", linewidth=0.7, alpha=0.7)
